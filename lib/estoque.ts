@@ -23,20 +23,33 @@ const ESTOQUE_INICIAL: ItemEstoque[] = [
 ];
 
 function garantirArquivo() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(ESTOQUE_INICIAL, null, 2), "utf-8");
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(ESTOQUE_INICIAL, null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("⚠️ Aviso: Não foi possível criar o arquivo (ambiente read-only). O estoque retornará o padrão inicial.");
   }
 }
 
 export function lerEstoque(): ItemEstoque[] {
-  garantirArquivo();
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+  try {
+    garantirArquivo();
+    return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+  } catch (error) {
+    console.warn("⚠️ Erro ao ler arquivo. Usando ESTOQUE_INICIAL como fallback.");
+    return ESTOQUE_INICIAL; // Retorna a lista base em memória para não quebrar a API
+  }
 }
 
 function salvarEstoque(itens: ItemEstoque[]) {
-  garantirArquivo();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(itens, null, 2), "utf-8");
+  try {
+    garantirArquivo();
+    fs.writeFileSync(DATA_FILE, JSON.stringify(itens, null, 2), "utf-8");
+  } catch (error) {
+    console.warn("⚠️ Erro ao salvar no arquivo (ambiente read-only). A alteração não será persistida no disco.");
+  }
 }
 
 function normalizar(s: string) {
