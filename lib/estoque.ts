@@ -193,3 +193,61 @@ export function exportarEstoque(formato: string = "csv") {
     conteudo: linhas.join("\n"),
   };
 }
+// ==========================================
+// NOVA FUNÇÃO: ADICIONAR ITEM
+// ==========================================
+export function adicionarItem(nomeItem: string, quantidade: number, unidade: string, minimo: number = 0) {
+  const itens = lerEstoque();
+  const alvo = normalizar(nomeItem);
+  const idx = itens.findIndex((i) => normalizar(i.nome) === alvo);
+
+  if (quantidade <= 0) {
+    return {
+      sucesso: false,
+      motivo: "quantidade_invalida",
+      mensagem: "A quantidade precisa ser maior que zero.",
+    };
+  }
+
+  if (idx !== -1) {
+    // Se o item já existe, apenas soma a quantidade
+    const item = itens[idx];
+    const novoValor = +(item.quantidade + quantidade).toFixed(3);
+    itens[idx] = { ...item, quantidade: novoValor };
+    
+    // Se o usuário passou um novo mínimo, atualiza
+    if (minimo > 0) itens[idx].minimo = minimo;
+
+    salvarEstoque(itens);
+
+    return {
+      sucesso: true,
+      acao: "atualizado",
+      item: item.nome,
+      quantidade_anterior: item.quantidade,
+      quantidade_atual: novoValor,
+      unidade: item.unidade,
+      mensagem: `Quantidade de ${item.nome} atualizada para ${novoValor} ${item.unidade}.`,
+    };
+  } else {
+    // Se NÃO existe, cria o item novo no Array
+    const novoItem: ItemEstoque = {
+      nome: normalizar(nomeItem),
+      quantidade: quantidade,
+      unidade: unidade,
+      minimo: minimo,
+    };
+
+    itens.push(novoItem);
+    salvarEstoque(itens);
+
+    return {
+      sucesso: true,
+      acao: "criado",
+      item: novoItem.nome,
+      quantidade: novoItem.quantidade,
+      unidade: novoItem.unidade,
+      mensagem: `Item "${novoItem.nome}" cadastrado com sucesso no estoque!`,
+    };
+  }
+}

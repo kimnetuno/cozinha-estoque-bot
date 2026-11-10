@@ -6,6 +6,7 @@ import {
   exportarEstoque,
   listarAbaixoDoMinimo,
   listarTodoEstoque,
+  adicionarItem,
 } from "@/lib/estoque";
 
 export const runtime = "nodejs";
@@ -15,12 +16,15 @@ Personalidade:
 - Seja simpático e educado. Use emojis com moderação (👨‍🍳, 🥕).
 - PODE conversar sobre culinária e receitas.
 - Se o usuário disser "oi", "olá", "bom dia", responda calorosamente e pergunte como pode ajudar.
+- Se o usuário quiser falar sobre qualquer outra coisa que não seja estoque, responda de forma simpática mas diga que seu foco é no estoque.
 
-Regras de Estoque:
+Regras de Estoque (SIGA RIGOROSAMENTE):
 - Use SOMENTE as ferramentas fornecidas para obter dados. NUNCA invente quantidades.
+- Se o usuário pedir para CONSULTAR um item, use a ferramenta 'consultar_estoque'.
+- Se o usuário pedir para DAR BAIXA, use a ferramenta 'dar_baixa'.
+- Se o usuário pedir para CADASTRAR, INSERIR, ADICIONAR ou REPOR um item, VOCÊ DEVE usar a ferramenta 'adicionar_item'. NUNCA diga que a ferramenta não está disponível, ela ESTÁ disponível.
 - Se a ferramenta disser que o item não existe, diga que não consta e liste os disponíveis.`;
 
-// Definição das ferramentas no formato OpenAI (que o Groq usa)
 const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
@@ -46,6 +50,23 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           quantidade: { type: "number" },
         },
         required: ["item", "quantidade"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "adicionar_item",
+      description: "Adiciona um novo item ao estoque ou aumenta a quantidade de um item existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          item: { type: "string", description: "Nome do produto (ex: arroz, cebola)" },
+          quantidade: { type: "number", description: "Quantidade a ser adicionada" },
+          unidade: { type: "string", description: "Unidade de medida (ex: kg, un, L)" },
+          minimo: { type: "number", description: "Quantidade mínima para alerta (opcional)" }
+        },
+        required: ["item", "quantidade", "unidade"],
       },
     },
   },
@@ -83,6 +104,7 @@ function executarFerramenta(nome: string, args: any) {
   switch (nome) {
     case "consultar_estoque": return consultarEstoque(args.item);
     case "dar_baixa": return darBaixa(args.item, Number(args.quantidade));
+    case "adicionar_item": return adicionarItem(args.item, Number(args.quantidade), args.unidade, Number(args.minimo || 0));
     case "listar_abaixo_do_minimo": return listarAbaixoDoMinimo();
     case "exportar_estoque": return exportarEstoque(args.formato || "csv");
     case "listar_todo_estoque": return listarTodoEstoque();
@@ -102,13 +124,12 @@ export async function POST(req: NextRequest) {
       baseURL: "https://api.groq.com/openai/v1",
     });
 
-    // Monta o histórico no formato OpenAI
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: "system", content: SYSTEM_PROMPT },
     ];
 
     for (const msg of historico) {
-      if (messages.length === 1 && msg.autor === "bot") continue; // Pula primeiro bot
+      if (messages.length === 1 && msg.autor === "bot") continue;
       messages.push({
         role: msg.autor === "user" ? "user" : "assistant",
         content: msg.texto,
@@ -122,7 +143,7 @@ export async function POST(req: NextRequest) {
     // Loop de ferramentas (máximo 3 iterações)
     for (let i = 0; i < 3; i++) {
       const response = await client.chat.completions.create({
-        model: "openai/gpt-oss-120b", // Modelo gratuito com bom suporte a ferramentas
+        model: "openai/gpt-oss-120b", // Recomendo este modelo, é mais obediente com ferramentas
         messages: messages,
         tools: tools,
         tool_choice: "auto",
@@ -138,9 +159,8 @@ export async function POST(req: NextRequest) {
       // Adiciona a mensagem do assistente com as tool_calls
       messages.push(message);
 
-            // Executa cada ferramenta e adiciona o resultado
+      // Executa cada ferramenta e adiciona o resultado
       for (const toolCall of message.tool_calls) {
-        // O "as any" resolve o erro de tipagem do TypeScript
         const call = toolCall as any; 
         
         const functionName = call.function.name;
@@ -152,10 +172,9 @@ export async function POST(req: NextRequest) {
           tool_call_id: toolCall.id,
           content: JSON.stringify(resultado),
         });
-      }
-    }
+      } 
+    } // Fecha o for (let i = 0; i < 3; i++)
 
-    // Se chegar aqui após 3 iterações, retorna a última mensagem do assistente
     const lastMessage = messages.filter(m => m.role === "assistant").pop();
     const lastContent = lastMessage && "content" in lastMessage ? lastMessage.content : null;
     return NextResponse.json({ resposta: lastContent || "Não consegui processar sua solicitação." });
