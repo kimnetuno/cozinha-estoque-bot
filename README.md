@@ -13,5 +13,5 @@ Um chatbot inteligente para gerenciar o estoque de uma cozinha profissional. O b
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/SEU_USUARIO/cozinha-estoque-bot.git
+   git clone https://github.com/kimnetuno/cozinha-estoque-bot.git
    cd cozinha-estoque-bot
