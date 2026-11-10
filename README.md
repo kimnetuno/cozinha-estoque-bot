@@ -13,5 +13,10 @@ Um chatbot inteligente para gerenciar o estoque de uma cozinha profissional. O b
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/SEU_USUARIO/cozinha-estoque-bot.git
+   git clone https://github.com/kimnetuno/cozinha-estoque-bot.git
    cd cozinha-estoque-bot
+> **Nota:** É necessário gerar uma chave de API gratuita no [Groq Console](https://console.groq.com/keys) e adicioná-la ao arquivo `.env.local` para que o bot possa se comunicar com a IA.
+
+### 🌐 Acesse a versão online
+Você pode testar o bot sem instalar nada acessando: **[cozinha-estoque-bot.vercel.app](https://cozinha-estoque-bot.vercel.app)**
+ https://cozinha-estoque-bot.vercel.app
